@@ -359,21 +359,21 @@ It is useful for setting up HTTPS and accessing the service using a URL instead 
 
 === ConfigMap
 
-It is an external configuration to the application, stored in plain text.
-It avoids having to build a new container if, for example, an URL must be changed.
+A `ConfigMap` allows to store external configurations for an application. Data is stored in plain text in (key, value) pairs.
+It avoids having to build a new container if, for example, a value in an environment value must be changed.
 
 It can contain URLs which are connected to the pod.
 
-Can be accessed as environment variables or as a properties file.
+A `ConfigMap` can be accessed as environment variables or as a properties file.
 
 ==== Configuration File
 
 A ConfigMap configuration file has:
 
-- An apiVersion with the configuration version.
-- kind set as `ConfigMap`.
-- metadata, such as the `name` of the ConfigMap.
-- data: it contains (key, value) pairs of data.
+- An `apiVersion` with the configuration version.
+- `kind` set as `ConfigMap`.
+- `metadata`, such as the `name` of the ConfigMap.
+- `data`: it contains (key, value) pairs of data.
 
 ```yaml
 apiVersion: v1
@@ -383,6 +383,36 @@ metadata:
 data:
   key1: value1
   key2: value2
+  filename.ext: |
+    <fileContent>
+```
+
+Inside a `Deployment`, you can use `volumes` and `volumeMounts` to access the ConfigMap as a configuration file:
+
+```yaml
+containers:
+- name: ...
+  ...
+  volumeMounts:
+  - name: myConfigMapVolume
+    # where the files will be located
+    mountPath: <path>
+
+volumes:
+- name: myConfigMapVolume
+  configMap:
+    name: myConfigMap
+```
+
+Or as an environment variable:
+
+```yaml
+env:
+- name: envVarName
+  valueFrom:
+    configMapKeyRef:
+      name: myConfigMap
+      key: myConfigMapKey
 ```
 
 === Secret
@@ -392,7 +422,13 @@ By default, it stores data using base64, but it is meant to be used with externa
 
 They can be connected to a pod, which can use the data.
 
-Can be accessed as environment variables or as a properties file.
+Secrets can be accessed as environment variables or as a properties file, just like ConfigMaps.
+
+They are useful to store:
+
+- credentials
+- tokens
+- certificates
 
 ==== Configuration File
 
@@ -413,6 +449,36 @@ type: Opaque
 data:
   key1: value1
   key2: value2
+```
+
+You can use `stringData` instead of `data` to have the value in plain text in the yaml file but encoded in Kubernetes.
+
+Inside a `Deployment`, you can use `volumes` and `volumeMounts` to access the Secret as a configuration file:
+
+```yaml
+containers:
+- name: ...
+  ...
+  volumeMounts:
+  - name: mySecretVolume
+    # where the files will be located
+    mountPath: <path>
+
+volumes:
+- name: mySecretVolume
+  secret:
+    secretName: mySecret
+```
+
+Or as an environment variable:
+
+```yaml
+env:
+- name: envVarName
+  valueFrom:
+    secretKeyRef:
+      name: mySecret
+      key: mySecretKey
 ```
 
 === Volume
