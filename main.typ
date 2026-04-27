@@ -141,6 +141,8 @@ By default, containers in a pod can't be accessed from outside the cluster's vir
 
 Pods are ephemeral, like docker containers: they don't store permanent state/data themselves.
 
+#colorbox([Persistent data can be stored in volumes.], title: "Note")
+
 === Deployment
 
 A deployment is used to create and update instances of an application.
@@ -415,8 +417,137 @@ data:
 
 === Volume
 
-Used for persistent data storage.
-It attaches storage to the pod, which can be local or remote storage.
+Volumes are used for persistent data storage.
+It attaches storage to the pod, which can be either local or remote.
+
+In a `Deployment`, you need to specify pod `volumes` and container's `volumeMounts`.
+
+```yaml
+containers:
+- name: ...
+  ...
+  volumeMounts:
+    - name: ...
+      # path in container
+      mountPath: ...
+
+volumes:
+- name: ...
+  persistentVolumeClaim:
+    claimName: myVolumeClaim
+```
+
+A `PersistentVolumeClaim` resource attaches a pod to a `PersistentVolume`:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myVolumeClaim
+spec:
+  accessModes:
+    ...
+  storageClassName: <class name>
+  resources:
+    requests:
+      storage: <required capacity>
+```
+
+And a `PersistentVolume` resource is a shared volume which abstracts a storage backend:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: ...
+spec:
+  capacity:
+    storage: ...
+  accessModes:
+    ...
+  <storageClass>
+```
+
+`storageClass` properties depend on the storage class (backend) type.
+It can be NFS, a cloud provider backend, ...
+
+==== hostPath Volume
+
+`hostPath` is a volume type. It is local storage which is not shared across the nodes in the cluster, which makes it not recommended.
+
+```yaml
+containers:
+- name: ...
+  ...
+  volumeMounts:
+    - name: ...
+      # path in container
+      mountPath: ...
+
+volumes:
+- name: ...
+  hostPath:
+    path: ...
+```
+
+==== NFS Volume
+
+Network File System (NFS) is a distributed file system protocol which allows to store data on a remote server and interact with it as if it were local.
+
+First, you need to create a `PersistentVolume` resource:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: myNfsVolume
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs
+  nfs:
+    server: <ip>
+    path: <path>
+```
+
+#colorbox([The accessModes are storage class dependent and application dependent.], title: "Note")
+
+Next, create a Persistent volume claim to allow pods to access the volume:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myNfsVolume
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: nfs
+  resources:
+    requests:
+      storage: 10Gi
+```
+
+#colorbox([This claim says that we require any nfs storage that has at least 10Gi of capacity.], title: "Note")
+
+Then, use the volume claim in a deployment:
+
+```yaml
+containers:
+- name: ...
+  ...
+  volumeMounts:
+    - name: myNfsVolumeClaim
+      # path in container
+      mountPath: ...
+
+volumes:
+- name: myNfsVolumeClaim
+  persistentVolumeClaim:
+    claimName: myNfsVolume
+```
 
 === Replicas
 
@@ -476,4 +607,9 @@ kubectl logs <pod_name> [-f]
 List all the nodes in the cluster:
 ```sh
 kubectl get nodes
+```
+
+Open an interactive bash shell inside a pod:
+```sh
+kubectl exec -it <pod name> -- /bin/bash
 ```
