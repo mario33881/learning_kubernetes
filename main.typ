@@ -27,27 +27,32 @@
 
 Kubernetes, also known as K8s, is an open source system for automating deployment, scaling, and management of containerized applications.
 
-It groups together the containers of an application.
-
-Kubernetes allows:
+Kubernetes is a container orchestrator and has the following features:
 
 - scalability: increase/decrease the resources depending on CPU usage, number of requests, ...
 - self-healing: it restarts containers if they stop running.
-- service discovery and load balancing: a DNS name is shared by a set of pods.
+- service discovery and load balancing: a DNS name is shared by a set of pods, which can be used to find and distribute traffic across the different pods.
 - automated rollouts and rollbacks of changes that propagate gradually.
-- storage orchestration by mounting the storage.
+- storage orchestration: different types of storage are mounted and shared in the cluster.
 - secrets and configuration management.
 - automatic bin packing: chooses where to run containers based on requirements and constraints.
-
 
 == Installation
 
 To install Kubernetes, you first need the `kubectl` CLI tool, which is used to interact with the Kubernetes cluster.
 
-Then, to run a local instance of Kubernetes to learn to use it, install minikube.
+Then, to run a local instance of Kubernetes to learn how it works, install minikube.
 
 #colorbox([`kubectl` works on all types of Kubernetes clusters.], title: "Note")
 
+In production, you can deploy Kubernetes in different ways:
+
+- on premise
+- using a cloud provider. The provider will give you a yaml file which contains information needed to access the cluster, which must be copied/appended to `~/.kube/config`.
+
+#colorbox([`kubectl config get-clusters` returns a list of configurations for the clusters. `kubectl cluster-info` returns information about the cluster.], title: "Note")
+
+There's also k3s, which is a lighter version of Kubernetes.
 
 == Getting Started
 
@@ -84,9 +89,9 @@ It has the following components:
 
 - `kube-apiserver`: exposes the Kubernetes HTTP API.
 
-  It is used by the dashboard and the kubectl tool to manage new configurations (in YAML or JSON format).
+  It is used by the dashboard and the `kubectl` tool to manage new configurations (in YAML or JSON format).
 
-- `etcd`: database (key, value) with the Kubernetes configuration.
+- `etcd`: distributed (key, value) database with the Kubernetes configuration.
 - `kube-scheduler`: schedules new pods to worker nodes depending on the resources that are available.
 - `kube-controller-manager`: runs controllers, which are used to move the system to the desired state.
 - `cloud-controller-manager`: used to integrate with a cloud provider. 
@@ -97,12 +102,33 @@ Nodes maintain running pods (with the applications running inside of them).
 
 They have the following components:
 
-- `kubelet`: ensures that the pods are running
+- `kubelet`: ensures that the pods are running in a healthy/desired state.
 - `kube-proxy`: it handles network rules to implement services (exposed applications)
 - Container runtime: used to run the containers
 
 
 == Concepts
+
+=== Resources
+
+Resources are the different components that are managed in Kubernetes,
+and are tipically defined declaratively using configuration files.
+
+They can also be created using `kubectl` but it's not best practice.
+
+=== Namespaces
+
+A namespace allows to organize resources.
+
+To create a namespace, use:
+```sh
+kubectl create namespace <name>
+```
+
+To set the current namespace, use:
+```sh
+kubectl config set-context --current --namespace <name>
+```
 
 === Pod
 
@@ -177,7 +203,7 @@ A deployment configuration file has:
   The `spec` contains a `template`, which is the blueprint of the pods.
   The `template` also has its own `metadata` and `spec`.
 
-  The pod's `spec` contains the `containers` specification, with its image and port number.
+  The pod's `spec` contains the `containers` specification, with its image and port number. If applicable, it can also contain `volumes` which can be mounted to a container using `volumeMounts`.
 
 The file also contains another component which is not managed by the user, which is the current state.
 
@@ -188,6 +214,7 @@ apiVersion: v1
 kind: Deployment
 metadata:
   name: myDeployment
+  # namespace: myNamespace
 spec:
   replicas: <N>
   selector:
@@ -198,11 +225,14 @@ spec:
       labels:
         myLabel: myLabelValue
     spec:
-      container:
+      containers:
       - name: myContainer
         image: myImage:<version>
         ports:
         - containerPort: <port>
+        volumeMounts:
+        - mountPath: <path>
+          name: myVolume
         env:
         - name: envVarName1
           value: envVarValue1
@@ -216,11 +246,30 @@ spec:
             configMapKeyRef:
               name: myConfigMap
               key: myConfigMapKey
+      volumes:
+      - name: myVolume
+        persistentVolumeClaim:
+          claimName: myVolumeClaim
 ```
 
 The `selector` indicates that all the replicas that match the labels are part of the same deployment.
 
 `valueFrom/secretKeyRef` is used to retrieve data from a `Secret`. Its `name` is the name of the `Secret`, while `key` is the name of the key which contains the secret itself.
+
+A container can also specify the `resources` that are required or their limits:
+
+```yaml
+containers:
+- name: myContainer
+  ...
+  resources:
+    limits:
+      memory: ...
+      cpu: ...
+    requests:
+      memory: ...
+      cpu: ...
+```
 
 === Service
 
@@ -270,9 +319,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: myService
+  # namespace: myNamespace
 spec:
   type: NodePort
   selector:
+    # deployment selector
     myLabel: myLabelValue
   ports:
     - protocol: TCP
@@ -285,6 +336,19 @@ spec:
 The `selector` indicates the labels of the pods which are exposed by the service.
 
 The `targetPort` is the port of the deployment, which should be the same as the `containerPort` in the deployment.
+
+There are different `type`s of services:
+
+- `ClusterIP`: the service can be accessed by any pod within the cluster.
+
+  To expose a `ClusterIP` service outside the cluster, you need to create an `Ingress` or a `Gateway`.
+
+- `NodePort`: the service is accessible using the node's IP.
+- `LoadBalancer`: the service is load-balanced across all nodes in the cluster.
+
+  It can be accessed from outside the cluster.
+
+  #colorbox([You need to set up the load balancer.], title: "Note")
 
 === Ingress
 
@@ -407,4 +471,9 @@ kubectl describe <resource_type> <resource_name>
 Shows all the logs of a pod:
 ```sh
 kubectl logs <pod_name> [-f]
+```
+
+List all the nodes in the cluster:
+```sh
+kubectl get nodes
 ```
