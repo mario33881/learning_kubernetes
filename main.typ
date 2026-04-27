@@ -354,8 +354,13 @@ There are different `type`s of services:
 
 === Ingress
 
-Forwards requests to a service.
+Forwards requests from outside the Kubernetes cluster to a service.
 It is useful for setting up HTTPS and accessing the service using a URL instead of an IP.
+
+A reverse proxy can be used for load balancing, which is the "Ingress Controller".
+An Ingress Controller forwards traffic to the Ingress resourses.
+
+#colorbox([Some examples of ingress controllers are nginx and traefik.], title: "Note")
 
 === ConfigMap
 
@@ -641,6 +646,67 @@ To apply a configuration file, use the apply command:
 
 ```sh
 kubectl apply -f <file>
+```
+
+== Helm Package Manager
+
+Helm (https://helm.sh) is a package manager for Kubernetes.
+
+Helm defines Helm charts, which are templates for Kubernetes resources.
+
+To find helm charts, you can search for them on artifacthub (https://artifacthub.io/).
+
+On a package website, you can:
+
+- click on "templates" to view the templates files
+- click on "default values" to view all the values that can be customized
+
+First, you need to add a repository using:
+
+```sh
+helm repo add <name> <url>
+```
+
+To install a package (with default values) use:
+
+```sh
+helm install <name> <repo name>/<chart name>
+```
+
+To install a package with overridden default values:
+
+1. Check the default values of the package
+2. Create a yaml file with the customized values:
+
+  ```yaml
+  keyName1: value1
+  keyName2: value2
+  ...
+  ```
+3. Install the package using the following command:
+
+  ```sh
+  helm install <name> <repo name>/<chart name> --values=<file.yml>
+  ```
+
+To view a list of all the installed charts, use:
+```sh
+helm ls
+```
+
+To upgrade a chart or make changes to the values:
+```sh
+helm upgrade <name> <repo name>/<chart name> --values=<file.yml>
+```
+
+Changes are saved as "releases", which can be used to rollback:
+```sh
+helm rollback <name> <revision number>
+```
+
+A history of changes can be viewed using:
+```sh
+helm history <name>
 ```
 
 == Useful kubectl commands
