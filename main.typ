@@ -795,6 +795,98 @@ spec:
 
 The `tls` section is used to refer to the certificate.
 
+=== Self signed certificates
+
+Create a private key for the certification authority:
+
+```sh
+openssl genrsa -out ca.key 4096
+```
+
+Generate a certificate:
+
+```sh
+openssl req -new -x509 -sha256 -days <number> -key ca.key -out ca.crt
+```
+
+To trust the certification authority the client must have the certificate
+in the trusted root ca store.
+
+For linux:
+
+```sh
+sudo mv ca.crt /usr/local/share/ca-certificates
+sudo update-ca-certificates
+```
+
+Create a `ClusterIssuer` which will issue certificates starting from the root certificate:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: myClusterIssuer
+spec:
+  ca:
+    secretName: myCertSecret
+```
+
+The root certificate an key are stored in a Secret:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: myCertSecret
+  # use the cert-manager namespace
+  namespace: <namespace>
+type: Opaque
+data:
+  tls.crt: <base64 certificate>
+  tls.key: <base64 private key>
+```
+
+Encode the certificate and private key files in base64:
+
+```sh
+cat ca.crt | base64 -w 0
+cat ca.key | base64 -w 0
+```
+
+Create a `Certificate` object which contains information about the certificate that will be issued:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: myIngressCertificate
+  namespace: myIngressNamespace
+spec:
+  # secret where the issued certificate is actually stored
+  secretName: myIngressCertificateSecret
+  # who is the issuer
+  issuerRef:
+    name: myClusterIssuer
+    kind: ClusterIssuer
+  dnsNames:
+    - <dns name>
+```
+
+An `Ingress` can use the `Certificate` information to request a certificate:
+
+```yaml
+...
+spec:
+  rules:
+  - host: <dns name>
+    ...
+  
+  tls:
+  - hosts:
+    - <dns name>
+    secretName: myIngressCertificateSecret
+```
+
 == GitOps
 
 GitOps is the practice of hosting resource files using a git repository
