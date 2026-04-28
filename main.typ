@@ -709,6 +709,86 @@ A history of changes can be viewed using:
 helm history <name>
 ```
 
+== Cert Manager
+
+Cert Manager allows to manage SSL certificates in Kubernetes.
+
+Certificates must also be renewed.
+
+Cert Manager stores certificates in Secrets.
+
+When you install Cert Manager, you also need to install CustomResourceDefinitions,
+which are new kinds of resources that are specific to cert manager:
+
+- `Issuer`: represents a certificate authority, which generates and issues certificates.
+  
+  An issuer only works in one namespace.
+
+- `ClusterIssuer`: like the Issuer, but works in multiple namespaces.
+
+Then you create a `Certificate` resource:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: <resource name>
+  namespace: <namespace>
+spec:
+  # where the certificate is stored
+  secretName: <name>
+  issuerRef:
+    name: <name of issuer>
+    # set kind to Issuer or ClusterIssuer
+    kind: ClusterIssuer
+  dnsNames:
+  - <dns name>
+```
+
+To view information about the current status:
+
+```sh
+kubectl describe certificate -n <namespace>
+kubectl get certificaterequest
+kubectl describe certificaterequest
+```
+
+To use the certificate, change the `Ingress` resource:
+
+```yaml
+apiVersion: ...
+kind: Ingress
+metadata:
+  name: ...
+  namespace: ...
+spec:
+  rules:
+  - host: <host name>
+    http:
+      ...
+
+  tls:
+  - hosts:
+      - <host name>
+    secretName: <secret name>
+```
+
+The `tls` section is used to refer to the certificate.
+
+== GitOps
+
+GitOps is the practice of hosting resource files using a git repository
+and have a management tool that listens to changes to apply them automatically.
+
+=== Portainer
+
+Portainer is a web UI interface for managing Docker and Kubernetes,
+but it also allows to perform GitOps.
+
+=== ArgoCD
+
+ArgoCD allows to deploy applications using GitOps.
+
 == Useful kubectl commands
 
 Shows all resources except for `ConfigMap`s and `Secret`s:
