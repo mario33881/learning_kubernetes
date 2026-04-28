@@ -273,6 +273,26 @@ containers:
       cpu: ...
 ```
 
+To detect if a container is ready and healty, you can add the `readinessProbe` and `livenessProbe` properties to the container.
+
+For example:
+
+```yaml
+containers:
+- name: ...
+  ...
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 80
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 80
+```
+
+This tells Kubernetes that a deployment is ready and healthy if a HTTP GET request to port 80 is successful.
+
 === Service
 
 It is a pod which is exposed outside of the Kubernetes virtual network.
