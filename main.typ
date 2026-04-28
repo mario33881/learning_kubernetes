@@ -889,8 +889,8 @@ spec:
 
 == GitOps
 
-GitOps is the practice of hosting resource files using a git repository
-and have a management tool that listens to changes to apply them automatically.
+GitOps is the practice of hosting Kubernetes resource files using a git repository
+and then have a management tool that listens to the changes and applies them automatically to run and upgrade an application deployment.
 
 === Portainer
 
@@ -900,6 +900,22 @@ but it also allows to perform GitOps.
 === ArgoCD
 
 ArgoCD allows to deploy applications using GitOps.
+
+To set up ArgoCD:
+
+1. Install ArgoCD in the cluster
+2. Create an Ingress to access the ArgoCD web interface
+3. Create a git repository where the Kubernetes resource files will be stored
+4. Go to the `Repositories` section in the ArgoCD web interface to connect ArgoCD to the repository
+5. Create a folder with resource files in the git repository
+6. Create an `Application` from the ArgoCD web interface.
+
+  - Set the sync policy to automatically if you want to pull changes automatically to deploy them.
+  - Specify the repository URL in the source section
+  - specify the path where the resource files are stored inside the path field (source section)
+  - select Kubernetes
+
+When Git changes are pushed or reverted, ArgoCD will detect the changes and apply them.
 
 == Useful kubectl commands
 
